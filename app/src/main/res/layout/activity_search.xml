@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="12dp" android:layout_width="match_parent" android:layout_height="match_parent">
+    <EditText android:id="@+id/etSearchName" android:hint="Name" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <EditText android:id="@+id/etSearchLocation" android:hint="Location" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <EditText android:id="@+id/etSearchLength" android:hint="Length" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <EditText android:id="@+id/etSearchDate" android:hint="Date (YYYY-MM-DD)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <Button android:id="@+id/btnPerformSearch" android:text="Search" android:layout_marginTop="8dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSearchResults" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="12dp"/>
+</LinearLayout>

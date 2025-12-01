@@ -1,0 +1,52 @@
+package com.example.m_hike.models;
+
+public class Hike {
+    private long id;
+    private String name;
+    private String location;
+    private String date; // ISO string yyyy-MM-dd
+    private boolean parkingAvailable;
+    private String length; // e.g. "5.2 km"
+    private String difficulty;
+    private String description;
+    private String extra1;
+    private String extra2;
+
+    public Hike() {}
+
+    public Hike(long id, String name, String location, String date, boolean parkingAvailable, String length, String difficulty, String description, String extra1, String extra2) {
+        this.id = id;
+        this.name = name;
+        this.location = location;
+        this.date = date;
+        this.parkingAvailable = parkingAvailable;
+        this.length = length;
+        this.difficulty = difficulty;
+        this.description = description;
+        this.extra1 = extra1;
+        this.extra2 = extra2;
+    }
+
+    // getters & setters
+    // ... (include for all fields)
+    public long getId() { return id; }
+    public void setId(long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public String getDate() { return date; }
+    public void setDate(String date) { this.date = date; }
+    public boolean isParkingAvailable() { return parkingAvailable; }
+    public void setParkingAvailable(boolean parkingAvailable) { this.parkingAvailable = parkingAvailable; }
+    public String getLength() { return length; }
+    public void setLength(String length) { this.length = length; }
+    public String getDifficulty() { return difficulty; }
+    public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    public String getExtra1() { return extra1; }
+    public void setExtra1(String extra1) { this.extra1 = extra1; }
+    public String getExtra2() { return extra2; }
+    public void setExtra2(String extra2) { this.extra2 = extra2; }
+}

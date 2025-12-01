@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:padding="12dp">
+
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+
+        <EditText android:id="@+id/etName" android:hint="Name of hike (required)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etLocation" android:hint="Location (required)" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
+        <TextView android:id="@+id/tvDate" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Select date"/>
+        <Switch android:id="@+id/swParking" android:text="Parking available?" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etLength" android:hint="Length (required)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDifficulty" android:hint="Difficulty (required)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDescription" android:hint="Description (optional)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etExtra1" android:hint="Extra field 1" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etExtra2" android:hint="Extra field 2" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <Button android:id="@+id/btnSaveHike" android:text="Save" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    </LinearLayout>
+</ScrollView>
