@@ -4,41 +4,66 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView; // Nhớ import cái này
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.m_hike.R;
 import com.example.m_hike.adapters.HikeAdapter;
 import com.example.m_hike.database.HikeDAO;
 import com.example.m_hike.models.Hike;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements HikeAdapter.OnItemClickListener {
     private HikeDAO dao;
     private HikeAdapter adapter;
     private RecyclerView rv;
+    private SearchView searchView;
+    private List<Hike> fullList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Khởi tạo DAO và Adapter
         dao = new HikeDAO(this);
+        adapter = new HikeAdapter(this);
+        fullList = new ArrayList<>();
+
+        // Ánh xạ RecyclerView
         rv = findViewById(R.id.rvHikes);
         rv.setLayoutManager(new LinearLayoutManager(this));
-
-        adapter = new HikeAdapter(this);
         rv.setAdapter(adapter);
+
 
         FloatingActionButton fab = findViewById(R.id.fabAddHike);
         fab.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, AddHikeActivity.class)));
+
+
+        searchView = findViewById(R.id.searchView);
+
+        searchView.clearFocus();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+
+                filterList(newText);
+                return true;
+            }
+        });
 
         loadData();
     }
@@ -47,11 +72,35 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
     protected void onResume() {
         super.onResume();
         loadData();
+
+        if (searchView != null && searchView.getQuery().length() > 0) {
+            filterList(searchView.getQuery().toString());
+        }
     }
 
     private void loadData() {
-        List<Hike> list = dao.getAll();
-        adapter.setList(list);
+        fullList = dao.getAll();
+        adapter.setList(fullList);
+    }
+
+
+    private void filterList(String text) {
+        List<Hike> filteredList = new ArrayList<>();
+
+
+        for (Hike hike : fullList) {
+
+            if (hike.getName().toLowerCase().contains(text.toLowerCase())) {
+                filteredList.add(hike);
+            }
+        }
+
+        if (filteredList.isEmpty()) {
+
+        }
+
+
+        adapter.setList(filteredList);
     }
 
     @Override
@@ -70,7 +119,13 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
                     boolean ok = dao.delete(hike.getId());
                     if (ok) {
                         Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
-                        loadData();
+
+                        fullList = dao.getAll();
+                        if (searchView.getQuery().length() > 0) {
+                            filterList(searchView.getQuery().toString());
+                        } else {
+                            adapter.setList(fullList);
+                        }
                     } else {
                         Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show();
                     }
@@ -81,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add("Search").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+
         menu.add("Reset DB").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
         return true;
     }
@@ -89,10 +144,9 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         String t = item.getTitle().toString();
-        if (t.equals("Search")) {
-            startActivity(new Intent(this, SearchActivity.class));
-            return true;
-        } else if (t.equals("Reset DB")) {
+
+
+        if (t.equals("Reset DB")) {
             new AlertDialog.Builder(this)
                     .setTitle("Confirm")
                     .setMessage("Delete all hikes and observations?")

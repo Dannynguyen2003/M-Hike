@@ -1,122 +1,148 @@
 package com.example.m_hike;
 
-import android.app.DatePickerDialog;
+import android.app.DatePickerDialog; // Import thêm cái này
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.view.View;
-import android.widget.*;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 
-import com.example.m_hike.R;
 import com.example.m_hike.database.HikeDAO;
 import com.example.m_hike.models.Hike;
-import com.example.m_hike.utils.DateTimeUtils;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
-import java.util.Calendar;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar; // Import thêm cái này
+import java.util.Date;
+import java.util.Locale;
 
 public class AddHikeActivity extends AppCompatActivity {
-    private EditText etName, etLocation, etLength, etDifficulty, etDescription, etExtra1, etExtra2;
-    private TextView tvDate;
-    private Switch swParking;
-    private Button btnSave;
-    private HikeDAO dao;
-    private long editingId = -1;
+
+    private ImageView ivHikeImage;
+    private TextView tvDate; // Đưa tvDate ra biến toàn cục để dùng ở nhiều chỗ
+    private String currentPhotoPath;
+    private Uri photoURI;
+
+    private final ActivityResultLauncher<Uri> takePictureLauncher = registerForActivityResult(
+            new ActivityResultContracts.TakePicture(),
+            result -> {
+                if (result) {
+                    ivHikeImage.setImageURI(photoURI);
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_hike);
 
-        etName = findViewById(R.id.etName);
-        etLocation = findViewById(R.id.etLocation);
-        etLength = findViewById(R.id.etLength);
-        etDifficulty = findViewById(R.id.etDifficulty);
-        etDescription = findViewById(R.id.etDescription);
-        etExtra1 = findViewById(R.id.etExtra1);
-        etExtra2 = findViewById(R.id.etExtra2);
-        tvDate = findViewById(R.id.tvDate);
-        swParking = findViewById(R.id.swParking);
-        btnSave = findViewById(R.id.btnSaveHike);
+        ivHikeImage = findViewById(R.id.ivHikeImage);
+        tvDate = findViewById(R.id.tvDate); // Ánh xạ ngay tại đây
 
-        dao = new HikeDAO(this);
+        Button btnTakePhoto = findViewById(R.id.btnTakePhoto);
+        Button btnSave = findViewById(R.id.btnSaveHike);
 
-        tvDate.setText(DateTimeUtils.todayDate());
+        // --- PHẦN MỚI: TỰ ĐỘNG LẤY NGÀY HIỆN TẠI ---
+        String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
+        tvDate.setText(currentDate);
+
+        // --- PHẦN MỚI: BẤM VÀO ĐỂ CHỌN NGÀY KHÁC ---
         tvDate.setOnClickListener(v -> showDatePicker());
 
-        btnSave.setOnClickListener(v -> onSave());
+        btnTakePhoto.setOnClickListener(v -> dispatchTakePictureIntent());
+        btnSave.setOnClickListener(v -> saveHike());
+    }
 
-        // Check if editing
-        long id = getIntent().getLongExtra("editId", -1);
-        if (id != -1) {
-            editingId = id;
-            Hike h = dao.getById(id);
-            if (h != null) {
-                etName.setText(h.getName());
-                etLocation.setText(h.getLocation());
-                tvDate.setText(h.getDate());
-                swParking.setChecked(h.isParkingAvailable());
-                etLength.setText(h.getLength());
-                etDifficulty.setText(h.getDifficulty());
-                etDescription.setText(h.getDescription());
-                etExtra1.setText(h.getExtra1());
-                etExtra2.setText(h.getExtra2());
-            }
+    // Hàm hiển thị lịch chọn ngày
+    private void showDatePicker() {
+        final Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog dialog = new DatePickerDialog(this,
+                (view, year1, month1, dayOfMonth) -> {
+                    // Lưu ý: tháng trong Android bắt đầu từ 0 nên phải +1
+                    String selectedDate = String.format(Locale.getDefault(), "%02d/%02d/%d", dayOfMonth, month1 + 1, year1);
+                    tvDate.setText(selectedDate);
+                }, year, month, day);
+        dialog.show();
+    }
+
+    private void dispatchTakePictureIntent() {
+        try {
+            File photoFile = createImageFile();
+            photoURI = FileProvider.getUriForFile(this,
+                    "com.example.m_hike.fileprovider",
+                    photoFile);
+            takePictureLauncher.launch(photoURI);
+        } catch (IOException ex) {
+            Toast.makeText(this, "Error creating file", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void showDatePicker() {
-        final Calendar c = Calendar.getInstance();
-        DatePickerDialog dp = new DatePickerDialog(this, (view, year, month, dayOfMonth) -> {
-            String s = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth);
-            tvDate.setText(s);
-        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
-        dp.show();
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        currentPhotoPath = image.getAbsolutePath();
+        return image;
     }
 
-    private void onSave() {
-        String name = etName.getText().toString().trim();
-        String loc = etLocation.getText().toString().trim();
-        String date = tvDate.getText().toString().trim();
+    private void saveHike() {
+        EditText edtName = findViewById(R.id.etName);
+        EditText edtLocation = findViewById(R.id.etLocation);
+        // tvDate đã được khai báo ở trên nên không cần findViewById lại
+        SwitchMaterial swParking = findViewById(R.id.swParking);
+        EditText edtLength = findViewById(R.id.etLength);
+        EditText edtDifficulty = findViewById(R.id.etDifficulty);
+        EditText edtDescription = findViewById(R.id.etDescription);
+        EditText edtExtra1 = findViewById(R.id.etExtra1);
+        EditText edtExtra2 = findViewById(R.id.etExtra2);
+
+        String name = edtName.getText().toString();
+        String location = edtLocation.getText().toString();
+        String date = tvDate.getText().toString();
         boolean parking = swParking.isChecked();
-        String length = etLength.getText().toString().trim();
-        String diff = etDifficulty.getText().toString().trim();
+        String length = edtLength.getText().toString();
+        String difficulty = edtDifficulty.getText().toString();
+        String description = edtDescription.getText().toString();
+        String extra1 = edtExtra1.getText().toString();
+        String extra2 = edtExtra2.getText().toString();
 
-        // Validation of required fields
-        if (TextUtils.isEmpty(name)) { etName.setError("Required"); etName.requestFocus(); return; }
-        if (TextUtils.isEmpty(loc)) { etLocation.setError("Required"); etLocation.requestFocus(); return; }
-        if (TextUtils.isEmpty(date)) { Toast.makeText(this, "Date required", Toast.LENGTH_SHORT).show(); return; }
-        if (TextUtils.isEmpty(length)) { etLength.setError("Required"); etLength.requestFocus(); return; }
-        if (TextUtils.isEmpty(diff)) { etDifficulty.setError("Required"); etDifficulty.requestFocus(); return; }
+        if (name.isEmpty() || location.isEmpty() || date.isEmpty() || length.isEmpty() || difficulty.isEmpty()) {
+            Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        Hike h = new Hike();
-        h.setName(name);
-        h.setLocation(loc);
-        h.setDate(date);
-        h.setParkingAvailable(parking);
-        h.setLength(length);
-        h.setDifficulty(diff);
-        h.setDescription(etDescription.getText().toString().trim());
-        h.setExtra1(etExtra1.getText().toString().trim());
-        h.setExtra2(etExtra2.getText().toString().trim());
+        Hike newHike = new Hike(name, location, date, parking, length, difficulty, description, extra1, extra2, currentPhotoPath);
 
-        if (editingId == -1) {
-            long id = dao.insert(h);
-            if (id > 0) {
-                Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                Toast.makeText(this, "Error saving", Toast.LENGTH_SHORT).show();
-            }
+        HikeDAO dao = new HikeDAO(this);
+        long result = dao.insert(newHike);
+
+        if (result != -1) {
+            Toast.makeText(this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+            finish();
         } else {
-            h.setId(editingId);
-            boolean ok = dao.update(h);
-            if (ok) {
-                Toast.makeText(this, "Updated", Toast.LENGTH_SHORT).show();
-                finish();
-            } else {
-                Toast.makeText(this, "Update failed", Toast.LENGTH_SHORT).show();
-            }
+            Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -6,7 +6,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DBHelper extends SQLiteOpenHelper {
     public static final String DB_NAME = "mhike.db";
-    public static final int DB_VERSION = 1;
+
+
+    public static final int DB_VERSION = 2;
 
     public static final String TABLE_HIKES = "hikes";
     public static final String H_ID = "_id";
@@ -17,6 +19,10 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String H_LENGTH = "length";
     public static final String H_DIFFICULTY = "difficulty";
     public static final String H_DESCRIPTION = "description";
+
+
+    public static final String H_IMAGE_PATH = "image_path";
+
     public static final String H_EXTRA1 = "extra1";
     public static final String H_EXTRA2 = "extra2";
 
@@ -42,6 +48,7 @@ public class DBHelper extends SQLiteOpenHelper {
                 H_LENGTH + " TEXT NOT NULL, " +
                 H_DIFFICULTY + " TEXT NOT NULL, " +
                 H_DESCRIPTION + " TEXT, " +
+                H_IMAGE_PATH + " TEXT, " +
                 H_EXTRA1 + " TEXT, " +
                 H_EXTRA2 + " TEXT" +
                 ");";
@@ -61,7 +68,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // simple: drop and recreate (improve as needed)
+
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_OBS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_HIKES);
         onCreate(db);

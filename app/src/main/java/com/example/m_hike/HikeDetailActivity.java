@@ -1,6 +1,7 @@
 package com.example.m_hike;
 
 import android.content.Intent;
+import android.net.Uri; // Nhớ import cái này
 import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
@@ -10,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.m_hike.R;
 import com.example.m_hike.adapters.ObservationAdapter;
 import com.example.m_hike.database.HikeDAO;
 import com.example.m_hike.database.ObservationDAO;
@@ -22,6 +22,8 @@ import java.util.List;
 public class HikeDetailActivity extends AppCompatActivity implements ObservationAdapter.OnItemClickListener {
     private HikeDAO hikeDAO;
     private ObservationDAO obsDAO;
+    // Khai báo thêm ImageView
+    private ImageView ivDetailImage;
     private TextView tvName, tvLocation, tvDate, tvParking, tvLength, tvDifficulty, tvDescription;
     private RecyclerView rvObs;
     private ObservationAdapter adapter;
@@ -41,6 +43,8 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
         hikeDAO = new HikeDAO(this);
         obsDAO = new ObservationDAO(this);
 
+        // --- ÁNH XẠ VIEW (Bao gồm cả ImageView) ---
+        ivDetailImage = findViewById(R.id.ivDetailImage); // Phải khớp ID bên XML
         tvName = findViewById(R.id.tvHikeName);
         tvLocation = findViewById(R.id.tvHikeLocation);
         tvDate = findViewById(R.id.tvHikeDate);
@@ -95,10 +99,24 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
             tvName.setText(hike.getName());
             tvLocation.setText(hike.getLocation());
             tvDate.setText(hike.getDate());
-            tvParking.setText(hike.isParkingAvailable() ? "Yes" : "No");
-            tvLength.setText(hike.getLength());
+
+
+            tvParking.setText("Parking: " + (hike.isParkingAvailable() ? "Yes" : "No"));
+
+            tvLength.setText("Length: " + hike.getLength());
             tvDifficulty.setText(hike.getDifficulty());
             tvDescription.setText(hike.getDescription() == null ? "" : hike.getDescription());
+
+
+            String imagePath = hike.getImagePath();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                ivDetailImage.setVisibility(View.VISIBLE);
+                ivDetailImage.setImageURI(Uri.parse(imagePath));
+            } else {
+
+//                ivDetailImage.setVisibility(View.GONE);
+
+            }
         }
     }
 
@@ -109,7 +127,6 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
 
     @Override
     public void onItemClick(Observation o) {
-        // open edit dialog/activity
         Intent i = new Intent(this, AddObservationActivity.class);
         i.putExtra("hikeId", hikeId);
         i.putExtra("editObsId", o.getId());

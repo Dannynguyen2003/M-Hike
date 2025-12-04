@@ -34,21 +34,23 @@ public class HikeDAO {
         return id;
     }
 
-    public boolean update(Hike h) {
+
+    public long update(Hike hike) {
         SQLiteDatabase db = helper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put(DBHelper.H_NAME, h.getName());
-        cv.put(DBHelper.H_LOCATION, h.getLocation());
-        cv.put(DBHelper.H_DATE, h.getDate());
-        cv.put(DBHelper.H_PARKING, h.isParkingAvailable() ? 1 : 0);
-        cv.put(DBHelper.H_LENGTH, h.getLength());
-        cv.put(DBHelper.H_DIFFICULTY, h.getDifficulty());
-        cv.put(DBHelper.H_DESCRIPTION, h.getDescription());
-        cv.put(DBHelper.H_EXTRA1, h.getExtra1());
-        cv.put(DBHelper.H_EXTRA2, h.getExtra2());
-        int rows = db.update(DBHelper.TABLE_HIKES, cv, DBHelper.H_ID + "=?", new String[]{String.valueOf(h.getId())});
-        db.close();
-        return rows > 0;
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.H_NAME, hike.getName());
+        values.put(DBHelper.H_LOCATION, hike.getLocation());
+        values.put(DBHelper.H_DATE, hike.getDate());
+        values.put(DBHelper.H_PARKING, hike.isParkingAvailable() ? 1 : 0);
+        values.put(DBHelper.H_LENGTH, hike.getLength());
+        values.put(DBHelper.H_DIFFICULTY, hike.getDifficulty());
+        values.put(DBHelper.H_DESCRIPTION, hike.getDescription());
+        values.put(DBHelper.H_IMAGE_PATH, hike.getImagePath());
+
+
+        return db.update(DBHelper.TABLE_HIKES, values,
+                DBHelper.H_ID + " = ?",
+                new String[]{String.valueOf(hike.getId())});
     }
 
     public boolean delete(long id) {
