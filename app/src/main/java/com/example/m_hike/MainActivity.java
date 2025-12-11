@@ -32,24 +32,24 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. Khởi tạo Database và Adapter
+
         dao = new HikeDAO(this);
-        adapter = new HikeAdapter(this); // Adapter này dùng interface OnItemClickListener
+        adapter = new HikeAdapter(this);
         fullList = new ArrayList<>();
 
-        // 2. Thiết lập RecyclerView
+
         rv = findViewById(R.id.rvHikes);
         rv.setLayoutManager(new LinearLayoutManager(this));
         rv.setAdapter(adapter);
 
-        // 3. Nút thêm mới
+
         FloatingActionButton fab = findViewById(R.id.fabAddHike);
         fab.setOnClickListener(v -> {
-            // Khi bấm nút thêm, chỉ mở Activity mà KHÔNG gửi ID -> Chế độ Thêm mới
+
             startActivity(new Intent(MainActivity.this, AddHikeActivity.class));
         });
 
-        // 4. Xử lý tìm kiếm (Search)
+
         searchView = findViewById(R.id.searchView);
         searchView.clearFocus();
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -65,17 +65,17 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
             }
         });
 
-        // 5. Load dữ liệu lần đầu
+
         loadData();
     }
 
-    // Mỗi khi quay lại từ màn hình Add/Edit, load lại danh sách để cập nhật thay đổi
+
     @Override
     protected void onResume() {
         super.onResume();
         loadData();
 
-        // Nếu đang search dở thì search lại
+
         if (searchView != null && searchView.getQuery().length() > 0) {
             filterList(searchView.getQuery().toString());
         }
@@ -93,54 +93,49 @@ public class MainActivity extends AppCompatActivity implements HikeAdapter.OnIte
                 filteredList.add(hike);
             }
         }
-        // Có thể thêm thông báo nếu list rỗng ở đây
+
         adapter.setList(filteredList);
     }
 
-    /**
-     * SỰ KIỆN CLICK VÀO 1 DÒNG (ĐỂ SỬA)
-     * Đây là đoạn code quan trọng nhất để chức năng Edit hoạt động
-     */
+
     @Override
     public void onItemClick(Hike hike) {
         Intent intent = new Intent(MainActivity.this, AddHikeActivity.class);
 
-        // 1. Gửi ID (BẮT BUỘC để biết sửa dòng nào)
+
         intent.putExtra("id", hike.getId());
 
-        // 2. Gửi các dữ liệu khác để điền vào form
+
         intent.putExtra("name", hike.getName());
         intent.putExtra("location", hike.getLocation());
         intent.putExtra("date", hike.getDate());
-        intent.putExtra("parking", hike.isParkingAvailable()); // Hoặc isParking() tùy vào model
+        intent.putExtra("parking", hike.isParkingAvailable());
         intent.putExtra("length", hike.getLength());
         intent.putExtra("difficulty", hike.getDifficulty());
         intent.putExtra("description", hike.getDescription());
 
-        // Gửi thêm các trường phụ nếu Model có
+
         intent.putExtra("extra1", hike.getExtra1());
         intent.putExtra("extra2", hike.getExtra2());
 
-        // Gửi đường dẫn ảnh
+
         intent.putExtra("photo_path", hike.getImagePath());
 
         startActivity(intent);
     }
 
-    /**
-     * SỰ KIỆN NHẤN GIỮ (ĐỂ XÓA)
-     */
+
     @Override
     public void onItemLongClick(Hike hike) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Hike")
                 .setMessage("Delete '" + hike.getName() + "' and its observations?")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    // Gọi lệnh xóa trong DAO
+
                     boolean ok = dao.delete(hike.getId());
                     if (ok) {
                         Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
-                        // Load lại dữ liệu ngay lập tức
+
                         loadData();
                     } else {
                         Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show();

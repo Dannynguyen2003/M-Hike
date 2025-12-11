@@ -1,34 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent" android:padding="12dp">
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
 
-    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <EditText android:id="@+id/etName" android:hint="Name of hike (required)" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etLocation" android:hint="Location (required)" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
-        <TextView android:id="@+id/tvDate" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Date"/>
-        <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/swParking" android:text="Parking available?" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etLength" android:hint="Length (required)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDifficulty" android:hint="Difficulty (required)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etDescription" android:hint="Description (optional)" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etExtra1" android:hint="Extra field 1" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <EditText android:id="@+id/etExtra2" android:hint="Extra field 2" android:layout_marginTop="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-        <ImageView
-            android:id="@+id/ivHikeImage"
+        <ImageView android:id="@+id/ivHikeImage" android:layout_width="match_parent" android:layout_height="200dp" android:background="#EEE" android:scaleType="centerCrop"/>
+        <Button android:id="@+id/btnTakePhoto" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Take Photo" android:layout_gravity="center"/>
+
+        <EditText android:id="@+id/etName" android:hint="Hike Name" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etLocation" android:hint="Location" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <TextView android:id="@+id/tvDate" android:textSize="18sp" android:padding="10dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/swParking" android:text="Parking Available" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <EditText android:id="@+id/etLength" android:hint="Length" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDifficulty" android:hint="Difficulty" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etDescription" android:hint="Description" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etExtra1" android:hint="Weather" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/etExtra2" android:hint="Team Size" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:id="@+id/layoutObservations"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:background="#E0E0E0"
-            android:src="@android:drawable/ic_menu_camera" />
-
-        <Button
-            android:id="@+id/btnTakePhoto"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Take Photo"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"/>
-        <Button android:id="@+id/btnSaveHike" android:text="Save" android:layout_marginTop="12dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="20dp"
+            android:background="#F0F0F0"
+            android:padding="10dp">
+            <TextView
+                android:text="Observations List"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnAddObsQuick"
+                android:text="+ Add Observation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvObservationsInside"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+        </LinearLayout>
+        <Button
+            android:id="@+id/btnSaveHike"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save Hike"
+            android:layout_marginTop="20dp"/>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

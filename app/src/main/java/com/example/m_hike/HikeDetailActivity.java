@@ -1,11 +1,10 @@
 package com.example.m_hike;
 
 import android.content.Intent;
-import android.net.Uri; // Nhớ import cái này
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.*;
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -22,7 +21,6 @@ import java.util.List;
 public class HikeDetailActivity extends AppCompatActivity implements ObservationAdapter.OnItemClickListener {
     private HikeDAO hikeDAO;
     private ObservationDAO obsDAO;
-    // Khai báo thêm ImageView
     private ImageView ivDetailImage;
     private TextView tvName, tvLocation, tvDate, tvParking, tvLength, tvDifficulty, tvDescription;
     private RecyclerView rvObs;
@@ -43,8 +41,7 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
         hikeDAO = new HikeDAO(this);
         obsDAO = new ObservationDAO(this);
 
-        // --- ÁNH XẠ VIEW (Bao gồm cả ImageView) ---
-        ivDetailImage = findViewById(R.id.ivDetailImage); // Phải khớp ID bên XML
+        ivDetailImage = findViewById(R.id.ivDetailImage);
         tvName = findViewById(R.id.tvHikeName);
         tvLocation = findViewById(R.id.tvHikeLocation);
         tvDate = findViewById(R.id.tvHikeDate);
@@ -58,22 +55,34 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
         adapter = new ObservationAdapter(this);
         rvObs.setAdapter(adapter);
 
+        // Nút thêm Observation
         findViewById(R.id.btnAddObservation).setOnClickListener(v -> {
             Intent i = new Intent(this, AddObservationActivity.class);
             i.putExtra("hikeId", hikeId);
             startActivity(i);
         });
 
+        // Nút sửa Hike - QUAN TRỌNG: Gửi đủ dữ liệu sang AddHikeActivity
         findViewById(R.id.btnEditHike).setOnClickListener(v -> {
+            if (hike == null) return;
             Intent i = new Intent(this, AddHikeActivity.class);
-            i.putExtra("editId", hikeId);
+            i.putExtra("id", hikeId); // Key phải khớp với bên AddHikeActivity nhận (checkForEditMode)
+            i.putExtra("name", hike.getName());
+            i.putExtra("location", hike.getLocation());
+            i.putExtra("date", hike.getDate());
+            i.putExtra("parking", hike.isParkingAvailable());
+            i.putExtra("length", hike.getLength());
+            i.putExtra("difficulty", hike.getDifficulty());
+            i.putExtra("description", hike.getDescription());
+            i.putExtra("photo_path", hike.getImagePath());
             startActivity(i);
         });
 
+        // Nút xóa Hike
         findViewById(R.id.btnDeleteHike).setOnClickListener(v -> {
             new AlertDialog.Builder(this)
                     .setTitle("Delete")
-                    .setMessage("Delete this hike and its observations?")
+                    .setMessage("Delete this hike and all its observations?")
                     .setPositiveButton("Delete", (d, w) -> {
                         hikeDAO.delete(hikeId);
                         finish();
@@ -99,23 +108,18 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
             tvName.setText(hike.getName());
             tvLocation.setText(hike.getLocation());
             tvDate.setText(hike.getDate());
-
-
             tvParking.setText("Parking: " + (hike.isParkingAvailable() ? "Yes" : "No"));
-
             tvLength.setText("Length: " + hike.getLength());
             tvDifficulty.setText(hike.getDifficulty());
-            tvDescription.setText(hike.getDescription() == null ? "" : hike.getDescription());
+            tvDescription.setText(hike.getDescription());
 
-
+            // Xử lý hiển thị ảnh
             String imagePath = hike.getImagePath();
             if (imagePath != null && !imagePath.isEmpty()) {
                 ivDetailImage.setVisibility(View.VISIBLE);
                 ivDetailImage.setImageURI(Uri.parse(imagePath));
             } else {
-
-//                ivDetailImage.setVisibility(View.GONE);
-
+                ivDetailImage.setVisibility(View.GONE); // Ẩn nếu không có ảnh
             }
         }
     }
@@ -127,6 +131,7 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
 
     @Override
     public void onItemClick(Observation o) {
+        // Click vào observation để sửa
         Intent i = new Intent(this, AddObservationActivity.class);
         i.putExtra("hikeId", hikeId);
         i.putExtra("editObsId", o.getId());
@@ -135,6 +140,7 @@ public class HikeDetailActivity extends AppCompatActivity implements Observation
 
     @Override
     public void onItemLongClick(Observation o) {
+        // Giữ lì để xóa observation
         new AlertDialog.Builder(this)
                 .setTitle("Delete Observation")
                 .setMessage("Delete this observation?")

@@ -5,19 +5,23 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.*;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.m_hike.adapters.ObservationAdapter;
 import com.example.m_hike.database.HikeDAO;
+import com.example.m_hike.database.ObservationDAO;
 import com.example.m_hike.models.Hike;
+import com.example.m_hike.models.Observation;
+import com.example.m_hike.utils.DateTimeUtils; // Giả sử bạn có class này, hoặc dùng SimpleDateFormat trực tiếp
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import java.io.File;
@@ -25,21 +29,28 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class AddHikeActivity extends AppCompatActivity {
 
-    // Khai báo biến toàn cục để dùng chung cho việc Load dữ liệu và Save
+    // Views cũ
     private ImageView ivHikeImage;
     private TextView tvDate;
     private EditText edtName, edtLocation, edtLength, edtDifficulty, edtDescription, edtExtra1, edtExtra2;
     private SwitchMaterial swParking;
     private Button btnSave;
 
+    // --- Views MỚI cho Observation ---
+    private LinearLayout layoutObservations;
+    private RecyclerView rvObservations;
+    private Button btnAddObsQuick;
+    private ObservationDAO obsDAO;
+    private ObservationAdapter obsAdapter;
+    // --------------------------------
+
     private String currentPhotoPath;
     private Uri photoURI;
-
-    // Biến lưu ID của chuyến đi (Mặc định -1 nghĩa là đang Thêm mới)
     private long hikeId = -1;
 
     private final ActivityResultLauncher<Uri> takePictureLauncher = registerForActivityResult(
@@ -55,19 +66,24 @@ public class AddHikeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_hike);
 
-        // 1. Ánh xạ View (Tách ra hàm riêng cho gọn)
-        initViews();
+        obsDAO = new ObservationDAO(this); // Khởi tạo DAO
 
-        // 2. Thiết lập ngày mặc định
+        initViews();
+        setupObservationList(); // Cài đặt RecyclerView
+
+        // Mặc định ngày hiện tại
         String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
         tvDate.setText(currentDate);
 
-        // 3. Xử lý sự kiện
+        // Sự kiện click
         tvDate.setOnClickListener(v -> showDatePicker());
         findViewById(R.id.btnTakePhoto).setOnClickListener(v -> dispatchTakePictureIntent());
         btnSave.setOnClickListener(v -> saveHike());
 
-        // 4. QUAN TRỌNG: Kiểm tra xem có phải đang sửa (Edit) không để điền dữ liệu cũ vào
+        // Sự kiện thêm Observation nhanh
+        btnAddObsQuick.setOnClickListener(v -> showObservationDialog(null));
+
+        // Kiểm tra chế độ Edit
         checkForEditMode();
     }
 
@@ -83,20 +99,46 @@ public class AddHikeActivity extends AppCompatActivity {
         edtExtra1 = findViewById(R.id.etExtra1);
         edtExtra2 = findViewById(R.id.etExtra2);
         btnSave = findViewById(R.id.btnSaveHike);
+
+        // Ánh xạ views mới
+        layoutObservations = findViewById(R.id.layoutObservations);
+        rvObservations = findViewById(R.id.rvObservationsInside);
+        btnAddObsQuick = findViewById(R.id.btnAddObsQuick);
     }
 
-    // Hàm kiểm tra Intent gửi sang
+    private void setupObservationList() {
+        rvObservations.setLayoutManager(new LinearLayoutManager(this));
+        obsAdapter = new ObservationAdapter(new ObservationAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(Observation o) {
+                // Click vào item để sửa
+                showObservationDialog(o);
+            }
+
+            @Override
+            public void onItemLongClick(Observation o) {
+                // Giữ lì để xóa
+                new AlertDialog.Builder(AddHikeActivity.this)
+                        .setTitle("Delete Observation")
+                        .setMessage("Are you sure?")
+                        .setPositiveButton("Yes", (d, w) -> {
+                            obsDAO.delete(o.getId());
+                            loadObservations(); // Load lại list
+                        })
+                        .setNegativeButton("No", null)
+                        .show();
+            }
+        });
+        rvObservations.setAdapter(obsAdapter);
+    }
+
     private void checkForEditMode() {
         Intent intent = getIntent();
-        // Kiểm tra xem có ID được gửi sang không (key phải khớp với bên Adapter gửi)
         if (intent != null && intent.hasExtra("id")) {
-            // Lấy ID ra lưu lại
             hikeId = intent.getLongExtra("id", -1);
-
-            // Đổi tên nút Save thành Update cho dễ nhìn
             btnSave.setText("Update Hike");
 
-            // Điền dữ liệu cũ vào các ô nhập liệu
+            // Fill dữ liệu cũ
             edtName.setText(intent.getStringExtra("name"));
             edtLocation.setText(intent.getStringExtra("location"));
             tvDate.setText(intent.getStringExtra("date"));
@@ -104,10 +146,9 @@ public class AddHikeActivity extends AppCompatActivity {
             edtLength.setText(intent.getStringExtra("length"));
             edtDifficulty.setText(intent.getStringExtra("difficulty"));
             edtDescription.setText(intent.getStringExtra("description"));
-            edtExtra1.setText(intent.getStringExtra("extra1")); // Nếu có gửi
-            edtExtra2.setText(intent.getStringExtra("extra2")); // Nếu có gửi
+            edtExtra1.setText(intent.getStringExtra("extra1"));
+            edtExtra2.setText(intent.getStringExtra("extra2"));
 
-            // Load ảnh cũ (nếu có)
             currentPhotoPath = intent.getStringExtra("photo_path");
             if (currentPhotoPath != null && !currentPhotoPath.isEmpty()) {
                 File imgFile = new File(currentPhotoPath);
@@ -115,7 +156,89 @@ public class AddHikeActivity extends AppCompatActivity {
                     ivHikeImage.setImageURI(Uri.fromFile(imgFile));
                 }
             }
+
+            // --- QUAN TRỌNG: HIỆN PHẦN OBSERVATION ---
+            layoutObservations.setVisibility(View.VISIBLE);
+            loadObservations();
+
+        } else {
+            // Đang thêm mới -> Ẩn phần Observation (vì chưa có hikeId để link)
+            layoutObservations.setVisibility(View.GONE);
         }
+    }
+
+    private void loadObservations() {
+        if (hikeId != -1) {
+            List<Observation> list = obsDAO.getByHike(hikeId);
+            obsAdapter.setList(list);
+        }
+    }
+
+    // --- HÀM HIỆN DIALOG ĐỂ THÊM/SỬA OBSERVATION ---
+    private void showObservationDialog(Observation obsToEdit) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(obsToEdit == null ? "Add Observation" : "Edit Observation");
+
+        // Tạo layout cho dialog bằng code (hoặc inflate từ xml riêng)
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(32, 32, 32, 32);
+
+        final EditText etObsName = new EditText(this);
+        etObsName.setHint("Observation Name");
+        layout.addView(etObsName);
+
+        final EditText etObsTime = new EditText(this);
+        etObsTime.setHint("Time (HH:mm)");
+        // Mặc định lấy giờ hiện tại
+        etObsTime.setText(new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date()));
+        layout.addView(etObsTime);
+
+        final EditText etObsComment = new EditText(this);
+        etObsComment.setHint("Comments");
+        layout.addView(etObsComment);
+
+        // Nếu đang sửa thì điền dữ liệu cũ
+        if (obsToEdit != null) {
+            etObsName.setText(obsToEdit.getObsText());
+            etObsTime.setText(obsToEdit.getTimestamp());
+            etObsComment.setText(obsToEdit.getComments());
+        }
+
+        builder.setView(layout);
+
+        builder.setPositiveButton("Save", (dialog, which) -> {
+            String name = etObsName.getText().toString();
+            String time = etObsTime.getText().toString();
+            String comment = etObsComment.getText().toString();
+
+            if (name.isEmpty()) {
+                Toast.makeText(this, "Name required", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (obsToEdit == null) {
+                // Thêm mới
+                Observation newObs = new Observation();
+                newObs.setHikeId(hikeId);
+                newObs.setObsText(name);
+                newObs.setTimestamp(time);
+                newObs.setComments(comment);
+                obsDAO.insert(newObs);
+                Toast.makeText(this, "Added observation", Toast.LENGTH_SHORT).show();
+            } else {
+                // Sửa
+                obsToEdit.setObsText(name);
+                obsToEdit.setTimestamp(time);
+                obsToEdit.setComments(comment);
+                obsDAO.update(obsToEdit);
+                Toast.makeText(this, "Updated observation", Toast.LENGTH_SHORT).show();
+            }
+            loadObservations(); // Refresh list ngay lập tức
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
     }
 
     private void showDatePicker() {
@@ -154,7 +277,6 @@ public class AddHikeActivity extends AppCompatActivity {
     }
 
     private void saveHike() {
-        // Lấy dữ liệu từ các ô nhập liệu
         String name = edtName.getText().toString();
         String location = edtLocation.getText().toString();
         String date = tvDate.getText().toString();
@@ -170,29 +292,22 @@ public class AddHikeActivity extends AppCompatActivity {
             return;
         }
 
-        // Tạo object Hike mới chứa thông tin mới nhập
         Hike hike = new Hike(name, location, date, parking, length, difficulty, description, extra1, extra2, currentPhotoPath);
-
         HikeDAO dao = new HikeDAO(this);
 
         if (hikeId == -1) {
-            // --- TRƯỜNG HỢP INSERT (THÊM MỚI) ---
+            // Create
             long result = dao.insert(hike);
             if (result != -1) {
-                Toast.makeText(this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Saved successfully! You can now add observations.", Toast.LENGTH_LONG).show();
                 finish();
             } else {
                 Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // --- TRƯỜNG HỢP UPDATE (SỬA) ---
-
-            // CỰC KỲ QUAN TRỌNG: Gán lại ID cũ cho object mới để Room biết sửa dòng nào
+            // Update
             hike.setId(hikeId);
-
-            // Gọi hàm update (Hàm này trả về số dòng bị ảnh hưởng, thường là kiểu int)
             int rowsAffected = dao.update(hike);
-
             if (rowsAffected > 0) {
                 Toast.makeText(this, "Updated successfully!", Toast.LENGTH_SHORT).show();
                 finish();
