@@ -1,11 +1,10 @@
 package com.example.m_hike;
 
-import android.app.DatePickerDialog; // Import thêm cái này
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -24,16 +23,24 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar; // Import thêm cái này
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
 public class AddHikeActivity extends AppCompatActivity {
 
+    // Khai báo biến toàn cục để dùng chung cho việc Load dữ liệu và Save
     private ImageView ivHikeImage;
-    private TextView tvDate; // Đưa tvDate ra biến toàn cục để dùng ở nhiều chỗ
+    private TextView tvDate;
+    private EditText edtName, edtLocation, edtLength, edtDifficulty, edtDescription, edtExtra1, edtExtra2;
+    private SwitchMaterial swParking;
+    private Button btnSave;
+
     private String currentPhotoPath;
     private Uri photoURI;
+
+    // Biến lưu ID của chuyến đi (Mặc định -1 nghĩa là đang Thêm mới)
+    private long hikeId = -1;
 
     private final ActivityResultLauncher<Uri> takePictureLauncher = registerForActivityResult(
             new ActivityResultContracts.TakePicture(),
@@ -48,24 +55,69 @@ public class AddHikeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_hike);
 
-        ivHikeImage = findViewById(R.id.ivHikeImage);
-        tvDate = findViewById(R.id.tvDate); // Ánh xạ ngay tại đây
+        // 1. Ánh xạ View (Tách ra hàm riêng cho gọn)
+        initViews();
 
-        Button btnTakePhoto = findViewById(R.id.btnTakePhoto);
-        Button btnSave = findViewById(R.id.btnSaveHike);
-
-        // --- PHẦN MỚI: TỰ ĐỘNG LẤY NGÀY HIỆN TẠI ---
+        // 2. Thiết lập ngày mặc định
         String currentDate = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date());
         tvDate.setText(currentDate);
 
-        // --- PHẦN MỚI: BẤM VÀO ĐỂ CHỌN NGÀY KHÁC ---
+        // 3. Xử lý sự kiện
         tvDate.setOnClickListener(v -> showDatePicker());
-
-        btnTakePhoto.setOnClickListener(v -> dispatchTakePictureIntent());
+        findViewById(R.id.btnTakePhoto).setOnClickListener(v -> dispatchTakePictureIntent());
         btnSave.setOnClickListener(v -> saveHike());
+
+        // 4. QUAN TRỌNG: Kiểm tra xem có phải đang sửa (Edit) không để điền dữ liệu cũ vào
+        checkForEditMode();
     }
 
-    // Hàm hiển thị lịch chọn ngày
+    private void initViews() {
+        ivHikeImage = findViewById(R.id.ivHikeImage);
+        tvDate = findViewById(R.id.tvDate);
+        edtName = findViewById(R.id.etName);
+        edtLocation = findViewById(R.id.etLocation);
+        swParking = findViewById(R.id.swParking);
+        edtLength = findViewById(R.id.etLength);
+        edtDifficulty = findViewById(R.id.etDifficulty);
+        edtDescription = findViewById(R.id.etDescription);
+        edtExtra1 = findViewById(R.id.etExtra1);
+        edtExtra2 = findViewById(R.id.etExtra2);
+        btnSave = findViewById(R.id.btnSaveHike);
+    }
+
+    // Hàm kiểm tra Intent gửi sang
+    private void checkForEditMode() {
+        Intent intent = getIntent();
+        // Kiểm tra xem có ID được gửi sang không (key phải khớp với bên Adapter gửi)
+        if (intent != null && intent.hasExtra("id")) {
+            // Lấy ID ra lưu lại
+            hikeId = intent.getLongExtra("id", -1);
+
+            // Đổi tên nút Save thành Update cho dễ nhìn
+            btnSave.setText("Update Hike");
+
+            // Điền dữ liệu cũ vào các ô nhập liệu
+            edtName.setText(intent.getStringExtra("name"));
+            edtLocation.setText(intent.getStringExtra("location"));
+            tvDate.setText(intent.getStringExtra("date"));
+            swParking.setChecked(intent.getBooleanExtra("parking", false));
+            edtLength.setText(intent.getStringExtra("length"));
+            edtDifficulty.setText(intent.getStringExtra("difficulty"));
+            edtDescription.setText(intent.getStringExtra("description"));
+            edtExtra1.setText(intent.getStringExtra("extra1")); // Nếu có gửi
+            edtExtra2.setText(intent.getStringExtra("extra2")); // Nếu có gửi
+
+            // Load ảnh cũ (nếu có)
+            currentPhotoPath = intent.getStringExtra("photo_path");
+            if (currentPhotoPath != null && !currentPhotoPath.isEmpty()) {
+                File imgFile = new File(currentPhotoPath);
+                if (imgFile.exists()) {
+                    ivHikeImage.setImageURI(Uri.fromFile(imgFile));
+                }
+            }
+        }
+    }
+
     private void showDatePicker() {
         final Calendar c = Calendar.getInstance();
         int year = c.get(Calendar.YEAR);
@@ -74,7 +126,6 @@ public class AddHikeActivity extends AppCompatActivity {
 
         DatePickerDialog dialog = new DatePickerDialog(this,
                 (view, year1, month1, dayOfMonth) -> {
-                    // Lưu ý: tháng trong Android bắt đầu từ 0 nên phải +1
                     String selectedDate = String.format(Locale.getDefault(), "%02d/%02d/%d", dayOfMonth, month1 + 1, year1);
                     tvDate.setText(selectedDate);
                 }, year, month, day);
@@ -97,27 +148,13 @@ public class AddHikeActivity extends AppCompatActivity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
-
+        File image = File.createTempFile(imageFileName, ".jpg", storageDir);
         currentPhotoPath = image.getAbsolutePath();
         return image;
     }
 
     private void saveHike() {
-        EditText edtName = findViewById(R.id.etName);
-        EditText edtLocation = findViewById(R.id.etLocation);
-        // tvDate đã được khai báo ở trên nên không cần findViewById lại
-        SwitchMaterial swParking = findViewById(R.id.swParking);
-        EditText edtLength = findViewById(R.id.etLength);
-        EditText edtDifficulty = findViewById(R.id.etDifficulty);
-        EditText edtDescription = findViewById(R.id.etDescription);
-        EditText edtExtra1 = findViewById(R.id.etExtra1);
-        EditText edtExtra2 = findViewById(R.id.etExtra2);
-
+        // Lấy dữ liệu từ các ô nhập liệu
         String name = edtName.getText().toString();
         String location = edtLocation.getText().toString();
         String date = tvDate.getText().toString();
@@ -133,16 +170,35 @@ public class AddHikeActivity extends AppCompatActivity {
             return;
         }
 
-        Hike newHike = new Hike(name, location, date, parking, length, difficulty, description, extra1, extra2, currentPhotoPath);
+        // Tạo object Hike mới chứa thông tin mới nhập
+        Hike hike = new Hike(name, location, date, parking, length, difficulty, description, extra1, extra2, currentPhotoPath);
 
         HikeDAO dao = new HikeDAO(this);
-        long result = dao.insert(newHike);
 
-        if (result != -1) {
-            Toast.makeText(this, "Saved successfully!", Toast.LENGTH_SHORT).show();
-            finish();
+        if (hikeId == -1) {
+            // --- TRƯỜNG HỢP INSERT (THÊM MỚI) ---
+            long result = dao.insert(hike);
+            if (result != -1) {
+                Toast.makeText(this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+                finish();
+            } else {
+                Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, "Save failed", Toast.LENGTH_SHORT).show();
+            // --- TRƯỜNG HỢP UPDATE (SỬA) ---
+
+            // CỰC KỲ QUAN TRỌNG: Gán lại ID cũ cho object mới để Room biết sửa dòng nào
+            hike.setId(hikeId);
+
+            // Gọi hàm update (Hàm này trả về số dòng bị ảnh hưởng, thường là kiểu int)
+            int rowsAffected = dao.update(hike);
+
+            if (rowsAffected > 0) {
+                Toast.makeText(this, "Updated successfully!", Toast.LENGTH_SHORT).show();
+                finish();
+            } else {
+                Toast.makeText(this, "Update failed!", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 }

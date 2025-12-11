@@ -35,7 +35,7 @@ public class HikeDAO {
     }
 
 
-    public long update(Hike hike) {
+    public int update(Hike hike) {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(DBHelper.H_NAME, hike.getName());
